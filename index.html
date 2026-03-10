@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaderDrop — NME to GLSL Converter & Preview</title>
+  <meta name="description" content="Convert Babylon.js Node Material Editor shaders to clean GLSL and preview them live in 3D.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <!-- ══════════════════ STARTUP SCREEN ══════════════════ -->
+  <div id="startup-overlay">
+    <div class="bg-grid"></div>
+    <div class="startup-inner">
+
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" stroke="url(#g1)" stroke-width="2" fill="none"/>
+          <path d="M24 12L34 18V30L24 36L14 30V18L24 12Z" fill="url(#g1)" opacity="0.15"/>
+          <path d="M24 12L34 18V30L24 36L14 30V18L24 12Z" stroke="url(#g1)" stroke-width="1.5" fill="none"/>
+          <circle cx="24" cy="24" r="4" fill="url(#g1)"/>
+          <defs><linearGradient id="g1" x1="6" y1="4" x2="42" y2="44"><stop stop-color="#fc094f"/><stop offset="1" stop-color="#9b5de5"/></linearGradient></defs>
+        </svg>
+        <h1>ShaderDrop</h1>
+        <p class="tagline">Convert Babylon NME shaders to clean GLSL · Preview live in 3D</p>
+      </div>
+
+      <!-- Single unified upload zone -->
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-inner">
+          <div class="drop-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="drop-text">
+            <span class="drop-main">Drop or browse a shader file</span>
+            <span class="drop-sub">Automatically detects NME exports and converts them · GLSL files load directly</span>
+          </div>
+
+          <label class="browse-btn" for="universalUpload">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Browse File
+          </label>
+          <input type="file" id="universalUpload" accept=".txt,.js,.glsl,.frag" style="display:none;">
+
+          <div class="drop-formats">
+            <span class="format-tag nme">.txt</span>
+            <span class="format-tag nme">.js</span>
+            <span class="format-sep">NME</span>
+            <span class="format-divider">·</span>
+            <span class="format-tag glsl">.glsl</span>
+            <span class="format-tag glsl">.frag</span>
+            <span class="format-sep">GLSL</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════ GLOBAL DROP OVERLAY ══════════════════ -->
+  <div id="global-drop-overlay">
+    <div class="global-drop-inner">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span>Drop to load shader</span>
+      <span class="drop-auto-hint">Auto-detects NME or GLSL</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════ PREVIEW SCREEN ══════════════════ -->
+  <canvas id="renderCanvas" style="display:none;"></canvas>
+
+  <div id="ui-layer" style="display:none;">
+    <div class="ui-row">
+      <span class="row-label">Shader</span>
+      <label class="pill-btn primary" for="nmeUpload" title="Convert an NME export">NME</label>
+      <input type="file" id="nmeUpload" accept=".txt,.js" style="display:none;">
+      <label class="pill-btn ghost" for="glslUpload" title="Open GLSL directly">GLSL</label>
+      <input type="file" id="glslUpload" accept=".glsl,.frag,.txt" style="display:none;">
+      <button id="saveGLSLBtn" class="pill-btn save" style="display:none;" title="Download converted GLSL">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save
+      </button>
+    </div>
+    <div class="ui-row">
+      <span class="row-label">Mesh</span>
+      <select id="meshSelect">
+        <option value="plane">Plane</option>
+        <option value="sphere">Sphere</option>
+        <option value="cube">Cube</option>
+        <option value="torus">Torus</option>
+        <option value="cylinder">Cylinder</option>
+        <option value="custom">Custom (upload)</option>
+      </select>
+      <input type="file" id="meshUpload" accept=".glb,.gltf,.obj,.babylon" style="display:none;">
+      <button id="meshUploadBtn" style="display:none;">Browse</button>
+    </div>
+    <div class="ui-row" id="textureRow">
+      <span class="row-label">Texture</span>
+      <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/jpg, image/webp">
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
